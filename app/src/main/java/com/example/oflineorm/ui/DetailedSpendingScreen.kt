@@ -1,322 +1,243 @@
-package com.example.oflineorm.ui
+package com.example.oflineorm.ui.screens
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
+import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.example.oflineorm.model.ReceiptData
 import com.example.oflineorm.model.SpendingMetrics
 import com.example.oflineorm.utils.parseDate
 import com.example.oflineorm.utils.toCurrencyString
-import java.text.SimpleDateFormat
-import java.util.Calendar
-import java.util.Locale
-
-// A professional, harmonious color palette for categories
-private val categoryColors = listOf(
-    Color(0xFFF2799B),      // Dusty Rose
-    Color(0xFFA577B8),      // Light Periwinkle
-    Color(0xFF9AD4BC),      // Pale Seafoam Green
-    Color(0xFF328C8D),      // Deep Muted Cyan
-    Color(0xFFA858C8),      // Pale Mauve
-    Color(0xFFABAE98),      // Light Taupe
-    Color(0xFFF1ADAF),      // Pale Salmon Pink
-    Color(0xFF919561)       // Pale Olive Green
-)
+import java.util.*
+import kotlin.math.min
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DetailedSpendingScreen(metrics: SpendingMetrics, receipts: List<ReceiptData>, onBack: () -> Unit) {
+fun DetailedSpendingScreen(
+    receipts: List<ReceiptData>,
+    onBack: () -> Unit,
+    metrics: SpendingMetrics
+) {
+    val todayStart = Calendar.getInstance().apply {
+        set(Calendar.HOUR_OF_DAY, 0)
+        set(Calendar.MINUTE, 0)
+        set(Calendar.SECOND, 0)
+        set(Calendar.MILLISECOND, 0)
+    }.timeInMillis
+
+    val weekStart = Calendar.getInstance().apply {
+        firstDayOfWeek = Calendar.SUNDAY
+        set(Calendar.DAY_OF_WEEK, firstDayOfWeek)
+        set(Calendar.HOUR_OF_DAY, 0)
+        set(Calendar.MINUTE, 0)
+        set(Calendar.SECOND, 0)
+        set(Calendar.MILLISECOND, 0)
+    }.timeInMillis
+
+    val monthStart = Calendar.getInstance().apply {
+        set(Calendar.DAY_OF_MONTH, 1)
+        set(Calendar.HOUR_OF_DAY, 0)
+        set(Calendar.MINUTE, 0)
+        set(Calendar.SECOND, 0)
+        set(Calendar.MILLISECOND, 0)
+    }.timeInMillis
+
+    fun getTransactionTime(receipt: ReceiptData): Long {
+        val parsed = parseDate(receipt.transactionDate)
+        return parsed?.time ?: receipt.timestamp
+    }
+
+    val todayReceipts = receipts.filter { getTransactionTime(it) >= todayStart }
+    val weekReceipts = receipts.filter { getTransactionTime(it) >= weekStart }
+    val monthReceipts = receipts.filter { getTransactionTime(it) >= monthStart }
+
+    val todayTotal = todayReceipts.sumOf { it.transactionAmount ?: 0.0 }
+    val weeklyTotal = weekReceipts.sumOf { it.transactionAmount ?: 0.0 }
+    val monthlyTotal = monthReceipts.sumOf { it.transactionAmount ?: 0.0 }
+
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Detailed Spending Overview") },
+                title = { Text("Detailed Spending") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(
+                            imageVector = Icons.Default.ArrowBack,
+                            contentDescription = "Back"
+                        )
                     }
                 }
             )
         }
-    ) { paddingValues ->
+    ) { padding ->
         Column(
             modifier = Modifier
-                .padding(paddingValues)
-                .padding(16.dp)
-                .verticalScroll(rememberScrollState())
+                .padding(padding)
+                .fillMaxSize()
+                .padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Summary cards
-            Card(modifier = Modifier.fillMaxWidth()) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text("Total Recorded Spend", style = MaterialTheme.typography.titleMedium)
-                    Text(metrics.totalSpend.toCurrencyString(), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
-                }
-            }
-            Spacer(Modifier.height(16.dp))
+            Text(
+                "Spending Summary",
+                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                modifier = Modifier.padding(bottom = 16.dp)
+            )
+
+            // Summary Cards
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                MetricCard(
-                    title = "This Month",
-                    value = metrics.monthlySpend.toCurrencyString(),
-                    modifier = Modifier.weight(1f)
-                )
-                MetricCard(
-                    title = "This Week",
-                    value = metrics.weeklySpend.toCurrencyString(),
-                    modifier = Modifier.weight(1f)
-                )
-                MetricCard(
+                OverviewMiniCard(
                     title = "Today",
-                    value = metrics.todaysSpending.toCurrencyString(),
-                    modifier = Modifier.weight(1f)
+                    value = todayTotal.toCurrencyString(),
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.8f)
+                )
+                OverviewMiniCard(
+                    title = "This Week",
+                    value = weeklyTotal.toCurrencyString(),
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.8f)
+                )
+                OverviewMiniCard(
+                    title = "This Month",
+                    value = monthlyTotal.toCurrencyString(),
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.8f)
                 )
             }
-            Spacer(Modifier.height(24.dp))
 
-            // Weekly spending bar chart
-            Text("Weekly Spending", style = MaterialTheme.typography.titleLarge)
-            Spacer(Modifier.height(16.dp))
-            WeeklySpendingBarChart(receipts = receipts)
-            Spacer(Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(20.dp))
 
-            // Category Breakdown Chart
-            Text("Category Breakdown", style = MaterialTheme.typography.titleLarge)
-            Spacer(Modifier.height(16.dp))
-            if (metrics.tagBreakdown.isNotEmpty()) {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-                ) {
-                    CategoryPieChart(metrics.tagBreakdown)
-                }
-            } else {
-                Text("No tagged transactions yet.", style = MaterialTheme.typography.bodyMedium)
-            }
-        }
-    }
-}
-
-@Composable
-private fun WeeklySpendingBarChart(receipts: List<ReceiptData>) {
-    val calendar = Calendar.getInstance()
-    calendar.firstDayOfWeek = Calendar.SUNDAY
-    calendar.set(Calendar.DAY_OF_WEEK, Calendar.SUNDAY)
-    calendar.set(Calendar.HOUR_OF_DAY, 0)
-    calendar.set(Calendar.MINUTE, 0)
-    calendar.set(Calendar.SECOND, 0)
-    calendar.set(Calendar.MILLISECOND, 0)
-
-    val weekStart = calendar.time
-    val weekDays = (0..6).map {
-        val date = calendar.time
-        calendar.add(Calendar.DAY_OF_YEAR, 1)
-        date
-    }
-    val weekEnd = calendar.time
-
-    val weeklyReceipts = receipts.filter { receipt ->
-        receipt.transactionAmount != null
-    }.filter { receipt ->
-        val transactionCal = Calendar.getInstance().apply {
-            val parsedDate = parseDate(receipt.transactionDate)
-            if (parsedDate != null) {
-                time = parsedDate
-            } else {
-                timeInMillis = receipt.timestamp
-            }
-        }
-        !transactionCal.before(Calendar.getInstance().apply { time = weekStart }) && transactionCal.before(Calendar.getInstance().apply { time = weekEnd })
-    }
-
-    val dailyTotals = weekDays.map { date ->
-        val dayCal = Calendar.getInstance().apply { time = date }
-        val dayOfWeek = dayCal.get(Calendar.DAY_OF_WEEK)
-
-        weeklyReceipts
-            .filter { receipt ->
-                val transactionCal = Calendar.getInstance().apply {
-                    val parsedDate = parseDate(receipt.transactionDate)
-                    if (parsedDate != null) {
-                        time = parsedDate
-                    } else {
-                        timeInMillis = receipt.timestamp
-                    }
-                }
-                transactionCal.get(Calendar.DAY_OF_WEEK) == dayOfWeek &&
-                        transactionCal.get(Calendar.WEEK_OF_YEAR) == dayCal.get(Calendar.WEEK_OF_YEAR)
-            }
-            .sumOf { it.transactionAmount ?: 0.0 }
-    }
-
-    val maxAmount = dailyTotals.maxOrNull() ?: 1.0
-    val dayFormat = SimpleDateFormat("EEE", Locale.getDefault())
-
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            dailyTotals.forEachIndexed { index, amount ->
-                val dayName = dayFormat.format(weekDays[index])
-                val barPercentage = if (maxAmount > 0) (amount / maxAmount).toFloat() else 0f
-                DaySpendingBar(dayName = dayName, amount = amount, barPercentage = barPercentage)
-            }
-        }
-    }
-}
-
-@Composable
-private fun DaySpendingBar(dayName: String, amount: Double, barPercentage: Float) {
-    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-        Text(dayName, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(0.15f))
-        Row(modifier = Modifier.weight(0.85f), verticalAlignment = Alignment.CenterVertically) {
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .height(20.dp)
-                    .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(4.dp))
-            ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth(barPercentage)
-                        .height(20.dp)
-                        .clip(RoundedCornerShape(4.dp))
-                        .background(MaterialTheme.colorScheme.secondary)
-                )
-            }
             Text(
-                amount.toCurrencyString(),
-                style = MaterialTheme.typography.bodySmall,
-                modifier = Modifier.padding(start = 8.dp),
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurface
+                "Spending by Tag",
+                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
+                modifier = Modifier.padding(vertical = 8.dp)
             )
+
+            SpendingByTagChart(receipts)
         }
     }
 }
 
 @Composable
-private fun MetricCard(title: String, value: String, modifier: Modifier = Modifier) {
+fun OverviewMiniCard(
+    title: String,
+    value: String,
+    containerColor: Color
+) {
     Card(
-        modifier = modifier,
-        shape = RoundedCornerShape(10.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+        modifier = Modifier
+
+            .shadow(2.dp, RoundedCornerShape(16.dp)),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = containerColor),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Column(
-            modifier = Modifier.padding(12.dp).fillMaxWidth(),
-            horizontalAlignment = Alignment.Start,
-            verticalArrangement = Arrangement.Center
+            modifier = Modifier
+                .padding(vertical = 16.dp, horizontal = 8.dp),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
                 text = title,
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                style = MaterialTheme.typography.labelMedium.copy(
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             )
             Spacer(Modifier.height(4.dp))
             Text(
                 text = value,
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface
+                style = MaterialTheme.typography.titleLarge.copy(
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                ),
+                textAlign = TextAlign.Center
             )
         }
     }
 }
 
 @Composable
-private fun CategoryPieChart(tagBreakdown: Map<String, Double>) {
-    val total = tagBreakdown.values.sum()
-    val sortedBreakdown = tagBreakdown.toList().sortedByDescending { it.second }
-    val colors = remember(sortedBreakdown.size) {
-        List(sortedBreakdown.size) { index -> categoryColors[index % categoryColors.size] }
+fun SpendingByTagChart(receipts: List<ReceiptData>) {
+    val grouped = receipts.groupBy { it.tag ?: "Untagged" }
+    val total = grouped.values.flatten().sumOf { it.transactionAmount ?: 0.0 }
+
+    val tagTotals = grouped.mapValues { entry ->
+        entry.value.sumOf { it.transactionAmount ?: 0.0 }
     }
+
+    val colors = listOf(
+        Color(0xFFEF5350), // Red
+        Color(0xFF42A5F5), // Blue
+        Color(0xFF66BB6A), // Green
+        Color(0xFFFFCA28), // Yellow
+        Color(0xFFAB47BC), // Purple
+        Color(0xFFFF7043)  // Orange
+    )
+
+    val tagList = tagTotals.entries.toList()
+    val sweepAngles = tagList.map { (it.value / total * 360f).toFloat() }
+
+    Canvas(
+        modifier = Modifier
+            .size(250.dp)
+            .padding(top = 12.dp)
+    ) {
+        var startAngle = 0f
+        val chartSize = min(size.width, size.height)
+
+        tagList.forEachIndexed { index, entry ->
+            val sweep = sweepAngles[index]
+            drawArc(
+                color = colors[index % colors.size],
+                startAngle = startAngle,
+                sweepAngle = sweep,
+                useCenter = true,
+                size = Size(chartSize, chartSize)
+            )
+            startAngle += sweep
+        }
+    }
+
+    Spacer(modifier = Modifier.height(20.dp))
 
     Column(
-        modifier = Modifier.padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+        horizontalAlignment = Alignment.Start,
+        verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
-        Box(modifier = Modifier.size(200.dp)) {
-            Canvas(modifier = Modifier.size(200.dp)) {
-                var startAngle = -90f
-                sortedBreakdown.forEachIndexed { index, (_, amount) ->
-                    val sweepAngle = (amount / total).toFloat() * 360f
-                    drawArc(
-                        color = colors[index],
-                        startAngle = startAngle,
-                        sweepAngle = sweepAngle,
-                        useCenter = false,
-                        style = Stroke(width = 60f)
-                    )
-                    startAngle += sweepAngle
-                }
+        tagList.forEachIndexed { index, entry ->
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(14.dp)
+                        .padding(2.dp)
+                        .background(colors[index % colors.size], shape = RoundedCornerShape(4.dp))
+                )
+                Text(
+                    text = "${entry.key}: ${entry.value.toCurrencyString()}",
+                    style = MaterialTheme.typography.bodyMedium
+                )
             }
         }
-        Spacer(Modifier.height(24.dp))
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            sortedBreakdown.forEachIndexed { index, (tag, amount) ->
-                val percentage = (amount / total) * 100
-                CategoryLegendItem(tag = tag, amount = amount, percentage = percentage, color = colors[index])
-            }
-        }
-    }
-}
-
-@Composable
-private fun CategoryLegendItem(tag: String, amount: Double, percentage: Double, color: Color) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
-            Box(
-                modifier = Modifier
-                    .size(12.dp)
-                    .background(color, CircleShape)
-            )
-            Spacer(Modifier.padding(horizontal = 8.dp))
-            Text(tag, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
-        }
-        Text(
-            text = "${amount.toCurrencyString()} (${String.format("%.1f", percentage)}%)",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
     }
 }

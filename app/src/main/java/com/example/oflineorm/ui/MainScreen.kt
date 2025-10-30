@@ -3,11 +3,12 @@ package com.example.oflineorm.ui
 import android.app.Activity
 import android.net.Uri
 import android.util.Log
-import androidx.activity.ComponentActivity
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.lazy.LazyColumn
@@ -31,7 +32,10 @@ import com.example.oflineorm.model.ReceiptData
 import com.example.oflineorm.ui.components.EditReceiptDialog
 import com.example.oflineorm.ui.components.ReceiptItem
 import com.example.oflineorm.ui.components.SpendingOverviewCard
+
+
 import com.example.oflineorm.ui.components.WeeklySpendingCalendar
+import com.example.oflineorm.ui.screens.DetailedSpendingScreen
 import com.example.oflineorm.utils.GPAY_PACKAGE
 import com.example.oflineorm.utils.PHONEPE_PACKAGE
 import com.example.oflineorm.utils.calculateSpendingMetrics
@@ -138,10 +142,14 @@ fun MainScreen(
                 color = MaterialTheme.colorScheme.background
             ) {
                 Column {
+
                     SpendingOverviewCard(
-                        metrics = spendingMetrics,
-                        modifier = Modifier.clickable { showDetailedSpending = true }
+                        receipts = receiptsList,
+                        onClick = { showDetailedSpending = true } // 👈 triggers navigation
                     )
+
+
+                    Spacer(modifier = Modifier.height(16.dp))
 
                     WeeklySpendingCalendar(receipts = receiptsList)
 
