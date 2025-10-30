@@ -1,10 +1,8 @@
 package com.example.oflineorm.ui.components
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -16,12 +14,12 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.example.oflineorm.model.SpendingMetrics
 import com.example.oflineorm.utils.toCurrencyString
@@ -31,71 +29,64 @@ fun SpendingOverviewCard(
     metrics: SpendingMetrics,
     modifier: Modifier = Modifier
 ) {
+    // Main card with a more subtle, Notion-like design
     Card(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 8.dp),
         shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp) // Flat design
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            // Title and Total Spend
+            // Title and Total Spend - reorganized for clarity
             Text(
-                text = "Spending Overview",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onPrimaryContainer
+                text = "Total Spend",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(4.dp))
             Text(
                 text = metrics.totalSpend.toCurrencyString(),
                 style = MaterialTheme.typography.headlineLarge,
                 fontWeight = FontWeight.ExtraBold,
-                color = MaterialTheme.colorScheme.primary
-            )
-            Text(
-                text = "Total Recorded Spend (All Time)",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onPrimaryContainer
+                color = MaterialTheme.colorScheme.onSurface
             )
 
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(24.dp))
 
-            // Daily, Weekly, Monthly Breakdown
+            // Daily, Weekly, Monthly Breakdown - with updated "Today" label
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 SpendingMetricItem(
                     title = "This Month",
                     value = metrics.monthlySpend.toCurrencyString(),
                     modifier = Modifier.weight(1f)
                 )
-                Spacer(Modifier.width(8.dp))
                 SpendingMetricItem(
                     title = "This Week",
                     value = metrics.weeklySpend.toCurrencyString(),
                     modifier = Modifier.weight(1f)
                 )
-                Spacer(Modifier.width(8.dp))
                 SpendingMetricItem(
-                    title = "Daily Average",
-                    value = metrics.dailyAverage.toCurrencyString(),
+                    title = "Today",
+                    value = metrics.todaysSpending.toCurrencyString(),
                     modifier = Modifier.weight(1f)
                 )
             }
 
-            // --- NEW: Tag Breakdown Section ---
+            // Tag Breakdown Section - with improved chip design
             if (metrics.tagBreakdown.isNotEmpty()) {
-                Spacer(Modifier.height(16.dp))
+                Spacer(Modifier.height(24.dp))
                 Text(
-                    text = "Category Breakdown (Total)",
+                    text = "Spending by Category",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                    color = MaterialTheme.colorScheme.onSurface
                 )
-                Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(12.dp))
 
                 // Scrollable Row for Tags
                 Row(
@@ -109,59 +100,62 @@ fun SpendingOverviewCard(
                     }
                 }
             }
-            // -----------------------------------
         }
     }
 }
 
 @Composable
 private fun SpendingMetricItem(title: String, value: String, modifier: Modifier = Modifier) {
-    Column(
-        modifier = modifier
-            .background(
-                MaterialTheme.colorScheme.background,
-                RoundedCornerShape(8.dp)
-            )
-            .padding(8.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+    // A cleaner, more defined metric item
+    Card(
+        modifier = modifier,
+        shape = RoundedCornerShape(10.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
-        Text(
-            text = title,
-            style = MaterialTheme.typography.labelSmall,
-            fontWeight = FontWeight.SemiBold,
-            textAlign = TextAlign.Center
-        )
-        Text(
-            text = value,
-            style = MaterialTheme.typography.bodyLarge,
-            fontWeight = FontWeight.Bold,
-            textAlign = TextAlign.Center,
-            color = MaterialTheme.colorScheme.secondary
-        )
+        Column(
+            modifier = Modifier.padding(12.dp).fillMaxWidth(),
+            horizontalAlignment = Alignment.Start,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = value,
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+        }
     }
 }
 
 @Composable
 private fun TagSpendingItem(tag: String, amount: Double) {
-    Card(
-        shape = RoundedCornerShape(8.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    // Redesigned to look like a modern "chip" or "pill"
+    Surface(
+        shape = RoundedCornerShape(20.dp),
+        color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.4f)
     ) {
-        Column(
-            modifier = Modifier.padding(10.dp).width(IntrinsicSize.Min),
-            horizontalAlignment = Alignment.CenterHorizontally
+        Row(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
+            Text(
+                text = tag,
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.Medium,
+                color = MaterialTheme.colorScheme.onSecondaryContainer
+            )
+            Spacer(Modifier.width(8.dp))
             Text(
                 text = amount.toCurrencyString(),
                 fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary,
-                style = MaterialTheme.typography.bodyLarge
-            )
-            Text(
-                text = tag,
-                style = MaterialTheme.typography.labelMedium,
-                textAlign = TextAlign.Center
+                color = MaterialTheme.colorScheme.onSecondaryContainer,
+                style = MaterialTheme.typography.bodyMedium
             )
         }
     }

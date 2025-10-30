@@ -1,18 +1,22 @@
 package com.example.oflineorm.ui.components
 
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -21,12 +25,26 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.example.oflineorm.model.ReceiptData
 import com.example.oflineorm.utils.PREDEFINED_TAGS
 
-@OptIn(ExperimentalMaterial3Api::class)
+// A palette of soft, distinct colors for the tags
+private val tagColors = listOf(
+    Color(0xFFE1F5FE), // Light Blue
+    Color(0xFFFCE4EC), // Light Pink
+    Color(0xFFF3E5F5), // Light Purple
+    Color(0xFFE8F5E9), // Light Green
+    Color(0xFFFFFDE7), // Light Yellow
+    Color(0xFFFBE9E7), // Light Orange
+    Color(0xFFEFEBE9)  // Light Brown
+)
+
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun EditReceiptDialog(
     receipt: ReceiptData,
@@ -36,18 +54,17 @@ fun EditReceiptDialog(
     var amountText by remember { mutableStateOf(receipt.transactionAmount?.toString() ?: "") }
     var dateText by remember { mutableStateOf(receipt.transactionDate ?: "") }
     var selectedTag by remember { mutableStateOf(receipt.tag ?: "") }
-    var isExpanded by remember { mutableStateOf(false) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Verify & Tag Expense") },
+        title = { Text("Edit Transaction") },
         text = {
             Column {
-                // 1. Amount Input
+                // Amount Input
                 OutlinedTextField(
                     value = amountText,
                     onValueChange = { amountText = it.filter { char -> char.isDigit() || char == '.' } },
-                    label = { Text("Transaction Amount") },
+                    label = { Text("Amount") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -57,46 +74,32 @@ fun EditReceiptDialog(
                 OutlinedTextField(
                     value = dateText,
                     onValueChange = { dateText = it },
-                    label = { Text("Transaction Date") },
+                    label = { Text("Date") },
                     modifier = Modifier.fillMaxWidth()
                 )
-                Spacer(Modifier.height(16.dp))
+                Spacer(Modifier.height(24.dp))
 
-                // 2. Tag Dropdown
-                ExposedDropdownMenuBox(
-                    expanded = isExpanded,
-                    onExpandedChange = { isExpanded = !isExpanded },
-                    modifier = Modifier.fillMaxWidth()
+                // Tag Selection
+                Text("Select a Category", style = MaterialTheme.typography.bodyMedium)
+                Spacer(Modifier.height(8.dp))
+                FlowRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    OutlinedTextField(
-                        modifier = Modifier.menuAnchor(),
-                        readOnly = true,
-                        value = selectedTag.takeIf { it.isNotEmpty() } ?: "Select Category",
-                        onValueChange = { },
-                        label = { Text("Category") },
-                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = isExpanded) },
-                        colors = ExposedDropdownMenuDefaults.textFieldColors()
-                    )
-                    ExposedDropdownMenu(
-                        expanded = isExpanded,
-                        onDismissRequest = { isExpanded = false }
-                    ) {
-                        PREDEFINED_TAGS.forEach { tag ->
-                            DropdownMenuItem(
-                                text = { Text(tag) },
-                                onClick = {
-                                    selectedTag = tag
-                                    isExpanded = false
-                                }
-                            )
-                        }
+                    PREDEFINED_TAGS.forEachIndexed { index, tag ->
+                        val colorIndex = index % tagColors.size
+                        val isSelected = selectedTag == tag
+                        TagChip(
+                            text = tag,
+                            isSelected = isSelected,
+                            color = tagColors[colorIndex],
+                            onClick = {
+                                selectedTag = if (isSelected) "" else tag // Toggle selection
+                            }
+                        )
                     }
                 }
-                Spacer(Modifier.height(16.dp))
-                Text(
-                    text = "Source: ${receipt.sourceAppId}",
-                    style = MaterialTheme.typography.labelMedium
-                )
             }
         },
         confirmButton = {
@@ -117,4 +120,32 @@ fun EditReceiptDialog(
             }
         }
     )
+}
+
+@Composable
+private fun TagChip(
+    text: String,
+    isSelected: Boolean,
+    color: Color,
+    onClick: () -> Unit
+) {
+    val borderColor = if (isSelected) color.copy(alpha = 0.8f) else color.copy(alpha = 0.5f)
+    val backgroundColor = if (isSelected) color else Color.Transparent
+
+    Surface(
+        modifier = Modifier
+            .clip(RoundedCornerShape(8.dp))
+            .border(1.dp, borderColor, RoundedCornerShape(8.dp))
+            .clickable(onClick = onClick),
+        color = backgroundColor,
+        shape = RoundedCornerShape(8.dp)
+    ) {
+        Text(
+            text = text,
+            color = if (isSelected) Color.Black.copy(alpha = 0.8f) else MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+            style = MaterialTheme.typography.bodyMedium,
+            textAlign = TextAlign.Center
+        )
+    }
 }

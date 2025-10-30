@@ -18,6 +18,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -72,10 +73,25 @@ fun DetailedSpendingScreen(metrics: SpendingMetrics, receipts: List<ReceiptData>
                 }
             }
             Spacer(Modifier.height(16.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                MetricCard("This Month", metrics.monthlySpend.toCurrencyString(), Modifier.weight(1f))
-                MetricCard("This Week", metrics.weeklySpend.toCurrencyString(), Modifier.weight(1f))
-                MetricCard("Daily Average", metrics.dailyAverage.toCurrencyString(), Modifier.weight(1f))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                MetricCard(
+                    title = "This Month",
+                    value = metrics.monthlySpend.toCurrencyString(),
+                    modifier = Modifier.weight(1f)
+                )
+                MetricCard(
+                    title = "This Week",
+                    value = metrics.weeklySpend.toCurrencyString(),
+                    modifier = Modifier.weight(1f)
+                )
+                MetricCard(
+                    title = "Today",
+                    value = metrics.todaysSpending.toCurrencyString(),
+                    modifier = Modifier.weight(1f)
+                )
             }
             Spacer(Modifier.height(24.dp))
 
@@ -198,13 +214,28 @@ private fun DaySpendingBar(dayName: String, amount: Double, barPercentage: Float
 
 @Composable
 private fun MetricCard(title: String, value: String, modifier: Modifier = Modifier) {
-    Card(modifier = modifier) {
+    Card(
+        modifier = modifier,
+        shape = RoundedCornerShape(10.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+    ) {
         Column(
-            modifier = Modifier.padding(16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+            modifier = Modifier.padding(12.dp).fillMaxWidth(),
+            horizontalAlignment = Alignment.Start,
+            verticalArrangement = Arrangement.Center
         ) {
-            Text(title, style = MaterialTheme.typography.labelLarge)
-            Text(value, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            Text(
+                text = title,
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = value,
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
         }
     }
 }

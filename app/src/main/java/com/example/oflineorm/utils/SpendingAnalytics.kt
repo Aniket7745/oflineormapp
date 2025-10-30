@@ -3,6 +3,7 @@ package com.example.oflineorm.utils
 import com.example.oflineorm.model.ReceiptData
 import com.example.oflineorm.model.SpendingMetrics
 import java.text.SimpleDateFormat
+import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 
@@ -20,7 +21,6 @@ fun calculateSpendingMetrics(receipts: List<ReceiptData>): SpendingMetrics {
     val validReceipts = receipts.filter { it.transactionAmount != null }
     val totalSpend = validReceipts.sumOf { it.transactionAmount!! }
 
-    // NEW: Tag Breakdown
     val tagBreakdown = validReceipts
         .groupBy { it.tag ?: "Untagged" }
         .mapValues { (_, list) -> list.sumOf { it.transactionAmount!! } }
@@ -28,45 +28,49 @@ fun calculateSpendingMetrics(receipts: List<ReceiptData>): SpendingMetrics {
         .sortedByDescending { it.second }
         .toMap()
 
-
     val now = System.currentTimeMillis()
-    val calendar = java.util.Calendar.getInstance().apply { timeInMillis = now }
-    val currentDayOfMonth = calendar.get(java.util.Calendar.DAY_OF_MONTH)
-    val currentDayOfWeek = calendar.get(java.util.Calendar.DAY_OF_WEEK)
+    val calendar = Calendar.getInstance().apply { timeInMillis = now }
 
-    val startOfWeek = (calendar.clone() as java.util.Calendar).apply {
-        add(java.util.Calendar.DATE, 1 - currentDayOfWeek)
-        set(java.util.Calendar.HOUR_OF_DAY, 0)
-        set(java.util.Calendar.MINUTE, 0)
-        set(java.util.Calendar.SECOND, 0)
-        set(java.util.Calendar.MILLISECOND, 0)
+    // Today's spending
+    val startOfToday = (calendar.clone() as Calendar).apply {
+        set(Calendar.HOUR_OF_DAY, 0)
+        set(Calendar.MINUTE, 0)
+        set(Calendar.SECOND, 0)
+        set(Calendar.MILLISECOND, 0)
     }
-
-    val startOfMonth = (calendar.clone() as java.util.Calendar).apply {
-        set(java.util.Calendar.DAY_OF_MONTH, 1)
-        set(java.util.Calendar.HOUR_OF_DAY, 0)
-        set(java.util.Calendar.MINUTE, 0)
-        set(java.util.Calendar.SECOND, 0)
-        set(java.util.Calendar.MILLISECOND, 0)
-    }
-
-    val monthlySpend = validReceipts.filter { it.timestamp >= startOfMonth.timeInMillis }
+    val todaysSpending = validReceipts
+        .filter { it.timestamp >= startOfToday.timeInMillis }
         .sumOf { it.transactionAmount!! }
 
-    val weeklySpend = validReceipts.filter { it.timestamp >= startOfWeek.timeInMillis }
+    // This week's spending
+    val startOfWeek = (calendar.clone() as Calendar).apply {
+        firstDayOfWeek = Calendar.SUNDAY
+        set(Calendar.DAY_OF_WEEK, Calendar.SUNDAY)
+    }
+    val weeklySpend = validReceipts
+        .filter { it.timestamp >= startOfWeek.timeInMillis }
         .sumOf { it.transactionAmount!! }
 
-    val dailyAverage = if (currentDayOfMonth > 0) {
-        monthlySpend / currentDayOfMonth.toDouble()
+    // This month's spending
+    val startOfMonth = (calendar.clone() as Calendar).apply {
+        set(Calendar.DAY_OF_MONTH, 1)
+    }
+    val monthlySpend = validReceipts
+        .filter { it.timestamp >= startOfMonth.timeInMillis }
+        .sumOf { it.transactionAmount!! }
+
+    val dailyAverage = if (calendar.get(Calendar.DAY_OF_MONTH) > 0) {
+        monthlySpend / calendar.get(Calendar.DAY_OF_MONTH).toDouble()
     } else {
         0.0
     }
 
     return SpendingMetrics(
         totalSpend = totalSpend,
+        todaysSpending = todaysSpending,
         dailyAverage = dailyAverage,
         weeklySpend = weeklySpend,
         monthlySpend = monthlySpend,
-        tagBreakdown = tagBreakdown // NEW
+        tagBreakdown = tagBreakdown
     )
 }
