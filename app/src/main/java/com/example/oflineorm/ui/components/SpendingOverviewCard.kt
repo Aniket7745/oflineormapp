@@ -1,161 +1,159 @@
 package com.example.oflineorm.ui.components
 
-import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.example.oflineorm.model.SpendingMetrics
+import androidx.compose.ui.unit.sp
+import com.example.oflineorm.model.ReceiptData
+import com.example.oflineorm.utils.parseDate
 import com.example.oflineorm.utils.toCurrencyString
+import java.util.*
 
 @Composable
 fun SpendingOverviewCard(
-    metrics: SpendingMetrics,
-    modifier: Modifier = Modifier
+    receipts: List<ReceiptData>,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit // 👈 new parameter
 ) {
-    // Main card with a more subtle, Notion-like design
+    val todayStart = Calendar.getInstance().apply {
+        set(Calendar.HOUR_OF_DAY, 0)
+        set(Calendar.MINUTE, 0)
+        set(Calendar.SECOND, 0)
+        set(Calendar.MILLISECOND, 0)
+    }.timeInMillis
+
+    val weekStart = Calendar.getInstance().apply {
+        firstDayOfWeek = Calendar.SUNDAY
+        set(Calendar.DAY_OF_WEEK, firstDayOfWeek)
+        set(Calendar.HOUR_OF_DAY, 0)
+        set(Calendar.MINUTE, 0)
+        set(Calendar.SECOND, 0)
+        set(Calendar.MILLISECOND, 0)
+    }.timeInMillis
+
+    val monthStart = Calendar.getInstance().apply {
+        set(Calendar.DAY_OF_MONTH, 1)
+        set(Calendar.HOUR_OF_DAY, 0)
+        set(Calendar.MINUTE, 0)
+        set(Calendar.SECOND, 0)
+        set(Calendar.MILLISECOND, 0)
+    }.timeInMillis
+
+    fun getTransactionTime(receipt: ReceiptData): Long {
+        val parsed = parseDate(receipt.transactionDate)
+        return parsed?.time ?: receipt.timestamp
+    }
+
+    val todayTotal = receipts.filter { getTransactionTime(it) >= todayStart }
+        .sumOf { it.transactionAmount ?: 0.0 }
+
+    val weeklyTotal = receipts.filter { getTransactionTime(it) >= weekStart }
+        .sumOf { it.transactionAmount ?: 0.0 }
+
+    val monthlyTotal = receipts.filter { getTransactionTime(it) >= monthStart }
+        .sumOf { it.transactionAmount ?: 0.0 }
+
+    // 🟩 Outer clickable card
     Card(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp) // Flat design
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+            .clickable { onClick() }, // 👈 make the section clickable
+        shape = RoundedCornerShape(24.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.primaryContainer,
+            contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+        )
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            // Title and Total Spend - reorganized for clarity
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(20.dp)
+        ) {
             Text(
-                text = "Total Spend",
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Spacer(Modifier.height(4.dp))
-            Text(
-                text = metrics.totalSpend.toCurrencyString(),
-                style = MaterialTheme.typography.headlineLarge,
-                fontWeight = FontWeight.ExtraBold,
-                color = MaterialTheme.colorScheme.onSurface
+                text = "Spending Overview",
+                style = MaterialTheme.typography.titleMedium.copy(
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 18.sp
+                ),
+                modifier = Modifier.padding(bottom = 16.dp)
             )
 
-            Spacer(Modifier.height(24.dp))
-
-            // Daily, Weekly, Monthly Breakdown - with updated "Today" label
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                SpendingMetricItem(
-                    title = "This Month",
-                    value = metrics.monthlySpend.toCurrencyString(),
-                    modifier = Modifier.weight(1f)
-                )
-                SpendingMetricItem(
-                    title = "This Week",
-                    value = metrics.weeklySpend.toCurrencyString(),
-                    modifier = Modifier.weight(1f)
-                )
-                SpendingMetricItem(
+                OverviewMiniCard(
                     title = "Today",
-                    value = metrics.todaysSpending.toCurrencyString(),
+                    value = todayTotal.toCurrencyString(),
+                    containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
                     modifier = Modifier.weight(1f)
                 )
-            }
 
-            // Tag Breakdown Section - with improved chip design
-            if (metrics.tagBreakdown.isNotEmpty()) {
-                Spacer(Modifier.height(24.dp))
-                Text(
-                    text = "Spending by Category",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onSurface
+                OverviewMiniCard(
+                    title = "This Week",
+                    value = weeklyTotal.toCurrencyString(),
+                    containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
+                    modifier = Modifier.weight(1f)
                 )
-                Spacer(Modifier.height(12.dp))
 
-                // Scrollable Row for Tags
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    metrics.tagBreakdown.forEach { (tag, amount) ->
-                        TagSpendingItem(tag = tag, amount = amount)
-                    }
-                }
+                OverviewMiniCard(
+                    title = "This Month",
+                    value = monthlyTotal.toCurrencyString(),
+                    containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.9f),
+                    modifier = Modifier.weight(1f)
+                )
             }
         }
     }
 }
 
 @Composable
-private fun SpendingMetricItem(title: String, value: String, modifier: Modifier = Modifier) {
-    // A cleaner, more defined metric item
+private fun OverviewMiniCard(
+    title: String,
+    value: String,
+    containerColor: androidx.compose.ui.graphics.Color,
+    modifier: Modifier = Modifier
+) {
     Card(
-        modifier = modifier,
-        shape = RoundedCornerShape(10.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+        modifier = modifier.shadow(3.dp, RoundedCornerShape(16.dp)),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = containerColor),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Column(
-            modifier = Modifier.padding(12.dp).fillMaxWidth(),
-            horizontalAlignment = Alignment.Start,
-            verticalArrangement = Arrangement.Center
+            modifier = Modifier
+                .padding(vertical = 16.dp, horizontal = 8.dp)
+                .fillMaxWidth(),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
                 text = title,
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                style = MaterialTheme.typography.labelMedium.copy(
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             )
-            Spacer(Modifier.height(4.dp))
+            Spacer(Modifier.height(6.dp))
             Text(
                 text = value,
-                style = MaterialTheme.typography.bodyLarge,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-        }
-    }
-}
-
-@Composable
-private fun TagSpendingItem(tag: String, amount: Double) {
-    // Redesigned to look like a modern "chip" or "pill"
-    Surface(
-        shape = RoundedCornerShape(20.dp),
-        color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.4f)
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = tag,
-                style = MaterialTheme.typography.labelLarge,
-                fontWeight = FontWeight.Medium,
-                color = MaterialTheme.colorScheme.onSecondaryContainer
-            )
-            Spacer(Modifier.width(8.dp))
-            Text(
-                text = amount.toCurrencyString(),
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSecondaryContainer,
-                style = MaterialTheme.typography.bodyMedium
+                style = MaterialTheme.typography.titleLarge.copy(
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                ),
+                textAlign = TextAlign.Center
             )
         }
     }
