@@ -33,15 +33,16 @@ import androidx.compose.ui.unit.dp
 import com.example.oflineorm.model.ReceiptData
 import com.example.oflineorm.utils.PREDEFINED_TAGS
 
-// A palette of soft, distinct colors for the tags
+// A professional, harmonious color palette for the tags
 private val tagColors = listOf(
-    Color(0xFFE1F5FE), // Light Blue
-    Color(0xFFFCE4EC), // Light Pink
-    Color(0xFFF3E5F5), // Light Purple
-    Color(0xFFE8F5E9), // Light Green
-    Color(0xFFFFFDE7), // Light Yellow
-    Color(0xFFFBE9E7), // Light Orange
-    Color(0xFFEFEBE9)  // Light Brown
+    Color(0xFFF2799B),      // Dusty Rose
+    Color(0xFFA577B8),      // Light Periwinkle
+    Color(0xFF9AD4BC),      // Pale Seafoam Green
+    Color(0xFF328C8D),      // Deep Muted Cyan
+    Color(0xFFA858C8),      // Pale Mauve
+    Color(0xFFABAE98),      // Light Taupe
+    Color(0xFFF1ADAF),      // Pale Salmon Pink
+    Color(0xFF919561)       // Pale Olive Green
 )
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -129,8 +130,9 @@ private fun TagChip(
     color: Color,
     onClick: () -> Unit
 ) {
-    val borderColor = if (isSelected) color.copy(alpha = 0.8f) else color.copy(alpha = 0.5f)
-    val backgroundColor = if (isSelected) color else Color.Transparent
+    val borderColor = if (isSelected) color.copy(alpha = 0.9f) else color.copy(alpha = 0.6f)
+    val backgroundColor = if (isSelected) color.copy(alpha = 0.2f) else Color.Transparent
+    val textColor = if (isSelected) color else color.copy(alpha = 0.7f)
 
     Surface(
         modifier = Modifier
@@ -142,7 +144,7 @@ private fun TagChip(
     ) {
         Text(
             text = text,
-            color = if (isSelected) Color.Black.copy(alpha = 0.8f) else MaterialTheme.colorScheme.onSurface,
+            color = textColor,
             modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
             style = MaterialTheme.typography.bodyMedium,
             textAlign = TextAlign.Center

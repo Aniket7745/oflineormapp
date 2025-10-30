@@ -37,12 +37,23 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.oflineorm.model.ReceiptData
 import com.example.oflineorm.model.SpendingMetrics
-import com.example.oflineorm.utils.generateRandomColors
 import com.example.oflineorm.utils.parseDate
 import com.example.oflineorm.utils.toCurrencyString
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
+
+// A professional, harmonious color palette for categories
+private val categoryColors = listOf(
+    Color(0xFFF2799B),      // Dusty Rose
+    Color(0xFFA577B8),      // Light Periwinkle
+    Color(0xFF9AD4BC),      // Pale Seafoam Green
+    Color(0xFF328C8D),      // Deep Muted Cyan
+    Color(0xFFA858C8),      // Pale Mauve
+    Color(0xFFABAE98),      // Light Taupe
+    Color(0xFFF1ADAF),      // Pale Salmon Pink
+    Color(0xFF919561)       // Pale Olive Green
+)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -105,7 +116,13 @@ fun DetailedSpendingScreen(metrics: SpendingMetrics, receipts: List<ReceiptData>
             Text("Category Breakdown", style = MaterialTheme.typography.titleLarge)
             Spacer(Modifier.height(16.dp))
             if (metrics.tagBreakdown.isNotEmpty()) {
-                CategoryPieChart(metrics.tagBreakdown)
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                ) {
+                    CategoryPieChart(metrics.tagBreakdown)
+                }
             } else {
                 Text("No tagged transactions yet.", style = MaterialTheme.typography.bodyMedium)
             }
@@ -244,9 +261,14 @@ private fun MetricCard(title: String, value: String, modifier: Modifier = Modifi
 private fun CategoryPieChart(tagBreakdown: Map<String, Double>) {
     val total = tagBreakdown.values.sum()
     val sortedBreakdown = tagBreakdown.toList().sortedByDescending { it.second }
-    val colors = remember { generateRandomColors(sortedBreakdown.size) }
+    val colors = remember(sortedBreakdown.size) {
+        List(sortedBreakdown.size) { index -> categoryColors[index % categoryColors.size] }
+    }
 
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+    Column(
+        modifier = Modifier.padding(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
         Box(modifier = Modifier.size(200.dp)) {
             Canvas(modifier = Modifier.size(200.dp)) {
                 var startAngle = -90f
@@ -276,23 +298,25 @@ private fun CategoryPieChart(tagBreakdown: Map<String, Double>) {
 @Composable
 private fun CategoryLegendItem(tag: String, amount: Double, percentage: Double, color: Color) {
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
             Box(
                 modifier = Modifier
-                    .size(16.dp)
+                    .size(12.dp)
                     .background(color, CircleShape)
             )
-            Spacer(Modifier.padding(horizontal = 4.dp))
-            Text(tag, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
+            Spacer(Modifier.padding(horizontal = 8.dp))
+            Text(tag, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
         }
         Text(
             text = "${amount.toCurrencyString()} (${String.format("%.1f", percentage)}%)",
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.secondary
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
 }
