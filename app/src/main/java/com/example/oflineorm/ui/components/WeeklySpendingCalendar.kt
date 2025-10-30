@@ -16,6 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.oflineorm.model.ReceiptData
+import com.example.oflineorm.utils.parseDate
 import com.example.oflineorm.utils.toCurrencyString
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -24,7 +25,6 @@ import java.util.Locale
 @Composable
 fun WeeklySpendingCalendar(receipts: List<ReceiptData>, modifier: Modifier = Modifier) {
     val calendar = Calendar.getInstance()
-    // Set to start of the week (Sunday)
     calendar.firstDayOfWeek = Calendar.SUNDAY
     calendar.set(Calendar.DAY_OF_WEEK, Calendar.SUNDAY)
     calendar.set(Calendar.HOUR_OF_DAY, 0)
@@ -32,15 +32,24 @@ fun WeeklySpendingCalendar(receipts: List<ReceiptData>, modifier: Modifier = Mod
     calendar.set(Calendar.SECOND, 0)
     calendar.set(Calendar.MILLISECOND, 0)
 
+    val weekStart = calendar.time
     val weekDays = (0..6).map {
         val date = calendar.time
         calendar.add(Calendar.DAY_OF_YEAR, 1)
         date
     }
-    val nextWeekStart = calendar.timeInMillis
+    val weekEnd = calendar.time
 
-    val weeklyReceipts = receipts.filter {
-        it.transactionAmount != null && it.timestamp >= weekDays.first().time && it.timestamp < nextWeekStart
+    val weeklyReceipts = receipts.filter { receipt ->
+        val transactionCal = Calendar.getInstance().apply {
+            val parsedDate = parseDate(receipt.transactionDate)
+            if (parsedDate != null) {
+                time = parsedDate
+            } else {
+                timeInMillis = receipt.timestamp
+            }
+        }
+        !transactionCal.before(Calendar.getInstance().apply { time = weekStart }) && transactionCal.before(Calendar.getInstance().apply { time = weekEnd })
     }
 
     val dayFormat = SimpleDateFormat("EEE", Locale.getDefault())
@@ -59,12 +68,21 @@ fun WeeklySpendingCalendar(receipts: List<ReceiptData>, modifier: Modifier = Mod
                 horizontalArrangement = Arrangement.SpaceAround
             ) {
                 weekDays.forEach { date ->
-                    val dayStart = date.time
-                    val dayEnd = dayStart + 24 * 60 * 60 * 1000
+                    val dayCal = Calendar.getInstance().apply { time = date }
+                    val dayOfWeek = dayCal.get(Calendar.DAY_OF_WEEK)
 
-                    val amount = weeklyReceipts
-                        .filter { it.timestamp >= dayStart && it.timestamp < dayEnd }
-                        .sumOf { it.transactionAmount!! }
+                    val amount = weeklyReceipts.filter { receipt ->
+                        val transactionCal = Calendar.getInstance().apply {
+                            val parsedDate = parseDate(receipt.transactionDate)
+                            if (parsedDate != null) {
+                                time = parsedDate
+                            } else {
+                                timeInMillis = receipt.timestamp
+                            }
+                        }
+                        transactionCal.get(Calendar.DAY_OF_WEEK) == dayOfWeek &&
+                                transactionCal.get(Calendar.WEEK_OF_YEAR) == dayCal.get(Calendar.WEEK_OF_YEAR)
+                    }.sumOf { it.transactionAmount ?: 0.0 }
 
                     DayCell(dayName = dayFormat.format(date), amount = amount)
                 }
@@ -72,6 +90,7 @@ fun WeeklySpendingCalendar(receipts: List<ReceiptData>, modifier: Modifier = Mod
         }
     }
 }
+
 
 @Composable
 private fun DayCell(dayName: String, amount: Double) {

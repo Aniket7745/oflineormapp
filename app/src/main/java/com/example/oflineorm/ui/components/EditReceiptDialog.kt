@@ -31,9 +31,10 @@ import com.example.oflineorm.utils.PREDEFINED_TAGS
 fun EditReceiptDialog(
     receipt: ReceiptData,
     onDismiss: () -> Unit,
-    onSave: (originalReceipt: ReceiptData, newAmount: Double?, newTag: String?) -> Unit
+    onSave: (originalReceipt: ReceiptData, newAmount: Double?, newDate: String?, newTag: String?) -> Unit
 ) {
     var amountText by remember { mutableStateOf(receipt.transactionAmount?.toString() ?: "") }
+    var dateText by remember { mutableStateOf(receipt.transactionDate ?: "") }
     var selectedTag by remember { mutableStateOf(receipt.tag ?: "") }
     var isExpanded by remember { mutableStateOf(false) }
 
@@ -48,6 +49,15 @@ fun EditReceiptDialog(
                     onValueChange = { amountText = it.filter { char -> char.isDigit() || char == '.' } },
                     label = { Text("Transaction Amount") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(Modifier.height(16.dp))
+
+                // Date Input
+                OutlinedTextField(
+                    value = dateText,
+                    onValueChange = { dateText = it },
+                    label = { Text("Transaction Date") },
                     modifier = Modifier.fillMaxWidth()
                 )
                 Spacer(Modifier.height(16.dp))
@@ -93,8 +103,9 @@ fun EditReceiptDialog(
             Button(
                 onClick = {
                     val finalAmount = amountText.toDoubleOrNull()
+                    val finalDate = dateText.takeIf { it.isNotEmpty() }
                     val finalTag = selectedTag.takeIf { it.isNotEmpty() }
-                    onSave(receipt, finalAmount, finalTag)
+                    onSave(receipt, finalAmount, finalDate, finalTag)
                 }
             ) {
                 Text("Save")

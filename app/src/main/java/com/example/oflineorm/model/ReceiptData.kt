@@ -6,5 +6,6 @@ data class ReceiptData(
     val rawText: String,
     val transactionAmount: Double?,
     val transactionTime: String?,
+    val transactionDate: String? = null,
     val tag: String? = null
 )

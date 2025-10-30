@@ -23,8 +23,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.oflineorm.model.ReceiptData
+import com.example.oflineorm.utils.parseDate
 import com.example.oflineorm.utils.toDateString
 import com.example.oflineorm.utils.toCurrencyString
+import java.text.SimpleDateFormat
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -40,10 +43,10 @@ fun ReceiptDetailScreen(receipt: ReceiptData, onBack: () -> Unit) {
                 }
             )
         }
-    ) {
+    ) { paddingValues ->
         Column(
             modifier = Modifier
-                .padding(it)
+                .padding(paddingValues)
                 .padding(16.dp)
                 .verticalScroll(rememberScrollState())
         ) {
@@ -60,7 +63,10 @@ fun ReceiptDetailScreen(receipt: ReceiptData, onBack: () -> Unit) {
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text("Date", style = MaterialTheme.typography.bodyLarge)
-                Text(receipt.timestamp.toDateString(), style = MaterialTheme.typography.bodyLarge)
+                Text(
+                    text = receipt.transactionDate?.let { parseDate(it)?.let { SimpleDateFormat("MMM d, yyyy", Locale.getDefault()).format(it) } } ?: receipt.timestamp.toDateString(),
+                    style = MaterialTheme.typography.bodyLarge
+                )
             }
             Spacer(Modifier.height(8.dp))
             Row(

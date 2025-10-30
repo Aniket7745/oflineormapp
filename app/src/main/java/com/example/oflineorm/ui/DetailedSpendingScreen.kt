@@ -37,6 +37,7 @@ import androidx.compose.ui.unit.dp
 import com.example.oflineorm.model.ReceiptData
 import com.example.oflineorm.model.SpendingMetrics
 import com.example.oflineorm.utils.generateRandomColors
+import com.example.oflineorm.utils.parseDate
 import com.example.oflineorm.utils.toCurrencyString
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -106,23 +107,46 @@ private fun WeeklySpendingBarChart(receipts: List<ReceiptData>) {
     calendar.set(Calendar.SECOND, 0)
     calendar.set(Calendar.MILLISECOND, 0)
 
+    val weekStart = calendar.time
     val weekDays = (0..6).map {
         val date = calendar.time
         calendar.add(Calendar.DAY_OF_YEAR, 1)
         date
     }
-    val nextWeekStart = calendar.timeInMillis
+    val weekEnd = calendar.time
 
-    val weeklyReceipts = receipts.filter {
-        it.transactionAmount != null && it.timestamp >= weekDays.first().time && it.timestamp < nextWeekStart
+    val weeklyReceipts = receipts.filter { receipt ->
+        receipt.transactionAmount != null
+    }.filter { receipt ->
+        val transactionCal = Calendar.getInstance().apply {
+            val parsedDate = parseDate(receipt.transactionDate)
+            if (parsedDate != null) {
+                time = parsedDate
+            } else {
+                timeInMillis = receipt.timestamp
+            }
+        }
+        !transactionCal.before(Calendar.getInstance().apply { time = weekStart }) && transactionCal.before(Calendar.getInstance().apply { time = weekEnd })
     }
 
     val dailyTotals = weekDays.map { date ->
-        val dayStart = date.time
-        val dayEnd = dayStart + 24 * 60 * 60 * 1000
+        val dayCal = Calendar.getInstance().apply { time = date }
+        val dayOfWeek = dayCal.get(Calendar.DAY_OF_WEEK)
+
         weeklyReceipts
-            .filter { it.timestamp >= dayStart && it.timestamp < dayEnd }
-            .sumOf { it.transactionAmount!! }
+            .filter { receipt ->
+                val transactionCal = Calendar.getInstance().apply {
+                    val parsedDate = parseDate(receipt.transactionDate)
+                    if (parsedDate != null) {
+                        time = parsedDate
+                    } else {
+                        timeInMillis = receipt.timestamp
+                    }
+                }
+                transactionCal.get(Calendar.DAY_OF_WEEK) == dayOfWeek &&
+                        transactionCal.get(Calendar.WEEK_OF_YEAR) == dayCal.get(Calendar.WEEK_OF_YEAR)
+            }
+            .sumOf { it.transactionAmount ?: 0.0 }
     }
 
     val maxAmount = dailyTotals.maxOrNull() ?: 1.0

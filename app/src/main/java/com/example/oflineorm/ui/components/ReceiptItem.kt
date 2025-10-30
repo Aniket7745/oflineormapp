@@ -25,8 +25,11 @@ import androidx.compose.ui.unit.dp
 import com.example.oflineorm.model.ReceiptData
 import com.example.oflineorm.utils.GPAY_PACKAGE
 import com.example.oflineorm.utils.PHONEPE_PACKAGE
+import com.example.oflineorm.utils.parseDate
 import com.example.oflineorm.utils.toDateString
 import com.example.oflineorm.utils.toCurrencyString
+import java.text.SimpleDateFormat
+import java.util.Locale
 
 @Composable
 fun ReceiptItem(
@@ -73,7 +76,7 @@ fun ReceiptItem(
                 // 2. Date and Time
                 Row {
                     Text(
-                        text = receipt.timestamp.toDateString(),
+                        text = receipt.transactionDate?.let { parseDate(it)?.let { SimpleDateFormat("MMM d, yyyy", Locale.getDefault()).format(it) } } ?: receipt.timestamp.toDateString(),
                         style = MaterialTheme.typography.bodyMedium,
                         color = contentColor.copy(alpha = 0.8f),
                         modifier = Modifier.padding(end = 8.dp)

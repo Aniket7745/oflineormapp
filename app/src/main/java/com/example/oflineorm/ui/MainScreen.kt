@@ -25,8 +25,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.example.oflineorm.data.loadReceiptsFromPrefs
-import com.example.oflineorm.data.saveReceiptsToPrefs
+import com.example.oflineorm.data.loadReceiptsFromJson
+import com.example.oflineorm.data.saveReceiptsAsJson
 import com.example.oflineorm.model.ReceiptData
 import com.example.oflineorm.ui.components.EditReceiptDialog
 import com.example.oflineorm.ui.components.ReceiptItem
@@ -54,33 +54,36 @@ fun MainScreen(
     var showDetailedSpending by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
-        val loadedReceipts = loadReceiptsFromPrefs(context as ComponentActivity)
+        val loadedReceipts = loadReceiptsFromJson(context)
         receiptsList.clear()
         receiptsList.addAll(loadedReceipts)
     }
 
     val onDeleteReceipt: (ReceiptData) -> Unit = { receiptToDelete ->
         receiptsList.remove(receiptToDelete)
-        saveReceiptsToPrefs(context as ComponentActivity, receiptsList.toList())
+        saveReceiptsAsJson(context, receiptsList.toList())
     }
 
-    val onSaveEditedReceipt: (ReceiptData, Double?, String?) -> Unit = { originalReceipt, newAmount, newTag ->
+    val onSaveEditedReceipt: (ReceiptData, Double?, String?, String?) -> Unit = { originalReceipt, newAmount, newDate, newTag ->
         val finalReceipt = originalReceipt.copy(
             transactionAmount = newAmount,
+            transactionDate = newDate,
             tag = newTag?.trim()?.takeIf { it.isNotEmpty() }
         )
 
-        // Remove the old entry and insert the new one at the top
-        receiptsList.remove(originalReceipt)
-        receiptsList.add(0, finalReceipt)
+        val index = receiptsList.indexOf(originalReceipt)
+        if (index != -1) {
+            receiptsList[index] = finalReceipt
+        } else {
+            receiptsList.add(0, finalReceipt)
+        }
 
-        saveReceiptsToPrefs(context as ComponentActivity, receiptsList.toList())
+        saveReceiptsAsJson(context, receiptsList.toList())
 
         showEditDialog = false
         pendingReceipt = null
     }
 
-    // Process image if shared
     if (imageUri != null) {
         LaunchedEffect(imageUri, sourcePackageId) {
             try {
@@ -90,7 +93,7 @@ fun MainScreen(
                 recognizer.process(inputImage)
                     .addOnSuccessListener { visionText ->
                         val fullRawText = visionText.text
-                        val (extractedAmount, extractedTime) = when {
+                        val (extractedAmount, extractedTime, extractedDate) = when {
                             sourcePackageId.contains(GPAY_PACKAGE) -> extractGPayData(fullRawText)
                             sourcePackageId.contains(PHONEPE_PACKAGE) -> extractPhonePeData(fullRawText)
                             else -> extractPhonePeData(fullRawText)
@@ -102,6 +105,7 @@ fun MainScreen(
                             rawText = fullRawText,
                             transactionAmount = extractedAmount,
                             transactionTime = extractedTime,
+                            transactionDate = extractedDate,
                             tag = null
                         )
 
@@ -134,23 +138,19 @@ fun MainScreen(
                 color = MaterialTheme.colorScheme.background
             ) {
                 Column {
-                    // SPENDING OVERVIEW INTEGRATION (Updated)
                     SpendingOverviewCard(
                         metrics = spendingMetrics,
                         modifier = Modifier.clickable { showDetailedSpending = true }
                     )
 
-                    // WEEKLY SPENDING CALENDAR
                     WeeklySpendingCalendar(receipts = receiptsList)
 
-                    // Transaction List Title
                     Text(
                         text = "Recent Transactions",
                         style = MaterialTheme.typography.titleMedium,
-                        modifier = Modifier.padding(start = 16.dp, top = 8.dp)
+                        modifier = Modifier.padding(start = 16.dp, top = 16.dp, bottom = 8.dp)
                     )
 
-                    // Transaction List
                     LazyColumn(modifier = Modifier.fillMaxSize()) {
                         items(receiptsList) { receipt ->
                             ReceiptItem(
@@ -166,7 +166,6 @@ fun MainScreen(
                     }
                 }
 
-                // Edit/Tagging Dialog
                 if (showEditDialog && pendingReceipt != null) {
                     EditReceiptDialog(
                         receipt = pendingReceipt!!,
